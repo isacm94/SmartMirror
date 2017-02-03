@@ -18,7 +18,8 @@
         android:text="13:01"
         android:textColor="@android:color/white"
         android:layout_marginBottom="@dimen/margin_bottom"
-        android:textSize="@dimen/tamanho_letra" />
+        android:textSize="@dimen/tamanho_letra"
+        android:fontFamily="sans-serif" />
 
     <TextView
         android:id="@+id/text_view_fecha"
@@ -70,9 +71,10 @@
         android:layout_toRightOf="@id/icono"
         android:text="30º"
         android:textColor="@android:color/white"
-        android:textSize="90sp" />
+        android:textSize="80sp" />
 
     <TextView
+        android:id="@+id/text_view_mensaje"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignBaseline="@id/icono"
@@ -95,6 +97,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Depor-Betis"
+        android:id="@+id/text_view_cal"
         android:textColor="@android:color/white"
         android:textSize="30sp"
         android:layout_alignTop="@id/icono_cal"
