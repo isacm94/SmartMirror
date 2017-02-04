@@ -1,6 +1,9 @@
 package salesianostriana.smartmirror;
 
 import android.graphics.Typeface;
+import android.location.Address;
+import android.location.Geocoder;
+import android.location.Location;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
@@ -10,6 +13,10 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import org.joda.time.DateTime;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.Locale;
 
 import retrofit.Call;
 import retrofit.Callback;
@@ -26,10 +33,26 @@ public class MainActivity extends AppCompatActivity {
     String TAG = "INFO";
 
 
+    public void setLocation(Location loc) {
+        // Obtener latitud y longitud
+        if (loc.getLatitude() != 0.0 && loc.getLongitude() != 0.0) {
+            try {
+                Geocoder geocoder = new Geocoder(this, Locale.getDefault());
+                List<Address> list = geocoder.getFromLocation(loc.getLatitude(), loc.getLongitude(), 1);
+                if (!list.isEmpty()) {
+                    Address address = list.get(0);
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
 
         GPSTracker tracker = new GPSTracker(this);
         if (!tracker.canGetLocation()) {
@@ -38,7 +61,7 @@ public class MainActivity extends AppCompatActivity {
             double latitude = tracker.getLatitude();
             double longitude = tracker.getLongitude();
 
-            Log.d(TAG, latitude+", "+longitude);
+            Log.d(TAG, latitude + ", " + longitude);
         }
 
         getSupportActionBar().hide();//Oculta action bar
