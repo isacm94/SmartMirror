@@ -41,7 +41,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
 
     String TAG = "INFO";
     private static final int PETICION_PERMISO_LOCALIZACION = 101;
-    private GoogleApiClient apiClient;
+    private GoogleApiClient mGoogleApiClient;
     String latitud = "", longitud = "", localidad = "";
 
     @Override
@@ -51,6 +51,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
 
         getSupportActionBar().hide();//Oculta action bar
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);//App pantalla completa
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);//Permite que la pantalla no se bloquee
 
         textViewHora = (TextView) findViewById(R.id.text_view_hora);
         textViewFecha = (TextView) findViewById(R.id.text_view_fecha);
@@ -105,7 +106,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
                             @Override
                             public void run() {
                                 //UBICACIÓN
-                                apiClient = new GoogleApiClient.Builder(MainActivity.this)
+                                mGoogleApiClient = new GoogleApiClient.Builder(MainActivity.this)
                                         .enableAutoManage(MainActivity.this, MainActivity.this)
                                         .addConnectionCallbacks(MainActivity.this)
                                         .addApi(LocationServices.API)
@@ -123,7 +124,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
 
     }
 
-
+    /* Actualiza la hora y la fecha actual, es actualizada cada 1 segundo.*/
     private void actualizaHoraFecha() {
         DateTime dateTimeNow = DateTime.now();
 
@@ -138,6 +139,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
         textViewFecha.setText(fecha);
     }
 
+    /*Consulta la predicción actual según las coordenadas actuales*/
     private void getPrediccionActual() {
         Retrofit retrofit = ((RetrofitApplication) getApplication()).getRetrofitOpenWeather();
 
@@ -169,10 +171,9 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
                 Log.e("¡ERROR!", "MainActivity onFailure: " + t.getMessage());
             }
         });
-
-
     }
 
+    /*Actualiza la información en la vista según la predicción actual consultada*/
     private void actualizaVista(Prediccion prediccionActual) {
         if (!localidad.isEmpty())
             textViewLugar.setText(localidad);
@@ -188,8 +189,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
         Log.d(TAG, prediccionActual.getName() + ", "
                 + prediccionActual.getMain().getTemp() + "º, " + prediccionActual.getWeather().get(0).getIcon() + ", "
                 + prediccionActual.getWeather().get(0).getDescription() + ", "
-                + prediccionActual.getWeather().get(0).getMensaje()+", "
-                +localidad);
+                + prediccionActual.getWeather().get(0).getMensaje() + ", "
+                + localidad);
     }
 
     /*UBICACIÓN*/
@@ -201,9 +202,9 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
         Log.e(TAG, "Error grave al conectar con Google Play Services");
     }
 
+    /*Conectado correctamente a Google Play Services*/
     @Override
     public void onConnected(@Nullable Bundle bundle) {
-        //Conectado correctamente a Google Play Services
 
         if (ActivityCompat.checkSelfPermission(this,
                 Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -214,9 +215,9 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
         } else {
 
             Location lastLocation =
-                    LocationServices.FusedLocationApi.getLastLocation(apiClient);
+                    LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
 
-            updateUI(lastLocation);
+            updateLocation(lastLocation);
         }
     }
 
@@ -227,12 +228,12 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
         Log.e(TAG, "Se ha interrumpido la conexión con Google Play Services");
     }
 
-    private void updateUI(Location loc) {
+    /*Actualiza las coordenadas actuales*/
+    private void updateLocation(Location loc) {
         if (loc != null) {
-
             latitud = String.valueOf(loc.getLatitude());
             longitud = String.valueOf(loc.getLongitude());
-            Log.d(TAG, "UBICACIÓN: " + latitud + ", " + longitud);
+            Log.d(TAG, "UBICACIÓN ACTUAL: " + latitud + ", " + longitud);
             setLocation(loc);
 
         } else {
@@ -244,11 +245,13 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
 
         getPrediccionActual();
 
-        apiClient.disconnect();
+        mGoogleApiClient.stopAutoManage(this);
+        mGoogleApiClient.disconnect();
     }
 
+    /*Obtener la localidad a partir de la latitud y la longitud*/
     public void setLocation(Location loc) {
-        //Obtener la direcci—n de la calle a partir de la latitud y la longitud
+
         if (loc.getLatitude() != 0.0 && loc.getLongitude() != 0.0) {
             Geocoder geocoder = new Geocoder(this, Locale.getDefault());
             List<Address> list = null;
@@ -265,6 +268,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
         }
     }
 
+    /*Pide los permisos de localización*/
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         if (requestCode == PETICION_PERMISO_LOCALIZACION) {
@@ -275,16 +279,30 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
 
                 @SuppressWarnings("MissingPermission")
                 Location lastLocation =
-                        LocationServices.FusedLocationApi.getLastLocation(apiClient);
+                        LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
 
-                updateUI(lastLocation);
+                updateLocation(lastLocation);
 
             } else {
                 //Permiso denegado:
                 //Deberíamos deshabilitar toda la funcionalidad relativa a la localización.
-
                 Log.e(TAG, "Permiso denegado");
             }
+        }
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        mGoogleApiClient.stopAutoManage(this);
+        mGoogleApiClient.disconnect();
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        if (mGoogleApiClient != null) {
+            mGoogleApiClient.connect();
         }
     }
 }
