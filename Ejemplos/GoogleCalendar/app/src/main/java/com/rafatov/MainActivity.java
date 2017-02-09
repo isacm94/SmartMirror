@@ -38,7 +38,12 @@ import com.google.api.services.calendar.model.Events;
 import com.google.gson.GsonBuilder;
 import com.rafatov.Clases.Calendar;
 
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
+
 import java.io.IOException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -83,14 +88,14 @@ public class MainActivity extends AppCompatActivity {
     private void getResultsFromApi() {
         if (! isGooglePlayServicesAvailable()) {
             acquireGooglePlayServices();
-            Toast.makeText(this, "GOOGLE SERVICES", Toast.LENGTH_SHORT).show();
+
         } else if (mCredential.getSelectedAccountName() == null) {
             chooseAccount();
-            Toast.makeText(this, "CHOOSE ACCOUNT", Toast.LENGTH_SHORT).show();
+
         } else if (! isDeviceOnline()) {
             Toast.makeText(this, "No hay conexión a internet", Toast.LENGTH_SHORT).show();
         } else {
-            Toast.makeText(this, "GOOGLE SERVICES", Toast.LENGTH_SHORT).show();
+
             new MakeRequestTask(mCredential).execute();
         }
     }
@@ -238,14 +243,27 @@ public class MainActivity extends AppCompatActivity {
             List<Event> items = events.getItems();
 
             for (Event event : items) {
+                String str;
+                org.joda.time.DateTime dateTimeJoda;
+
                 DateTime start = event.getStart().getDateTime();
                 if (start == null) {
                     // All-day events don't have start times, so just use
                     // the start date.
+
                     start = event.getStart().getDate();
+                    dateTimeJoda = new org.joda.time.DateTime(start.getValue());
+                    DateTimeFormatter fmt = DateTimeFormat.forPattern("dd/MM");
+                    str = dateTimeJoda.toString(fmt);
+
+                }else{
+                    dateTimeJoda = new org.joda.time.DateTime(start.getValue());
+                    DateTimeFormatter fmt2 = DateTimeFormat.forPattern("HH:mm  dd/MM");
+                    str = dateTimeJoda.toString(fmt2);
                 }
+
                 eventStrings.add(
-                        String.format("%s (%s)", event.getSummary(), start));
+                        String.format("%s (%s)", event.getSummary(), str));
             }
             return eventStrings;
         }
