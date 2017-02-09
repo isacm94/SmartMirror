@@ -76,24 +76,21 @@ public class MainActivity extends AppCompatActivity {
                 getApplicationContext(), Arrays.asList(SCOPES))
                 .setBackOff(new ExponentialBackOff());
 
-
-
-        while(!done){
-            getResultsFromApi();
-        }
-
+        getResultsFromApi();
 
     }
 
     private void getResultsFromApi() {
         if (! isGooglePlayServicesAvailable()) {
             acquireGooglePlayServices();
+            Toast.makeText(this, "GOOGLE SERVICES", Toast.LENGTH_SHORT).show();
         } else if (mCredential.getSelectedAccountName() == null) {
             chooseAccount();
+            Toast.makeText(this, "CHOOSE ACCOUNT", Toast.LENGTH_SHORT).show();
         } else if (! isDeviceOnline()) {
             Toast.makeText(this, "No hay conexión a internet", Toast.LENGTH_SHORT).show();
         } else {
-            done = true;
+            Toast.makeText(this, "GOOGLE SERVICES", Toast.LENGTH_SHORT).show();
             new MakeRequestTask(mCredential).execute();
         }
     }
