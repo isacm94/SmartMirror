@@ -1,31 +1,59 @@
 package salesianostriana.smartmirror;
 
 import android.Manifest;
+import android.accounts.AccountManager;
+import android.app.Dialog;
+import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Typeface;
 import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.WindowManager;
+import android.widget.ArrayAdapter;
 import android.widget.ImageView;
+import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationServices;
+import com.google.api.client.extensions.android.http.AndroidHttp;
+import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential;
+import com.google.api.client.googleapis.extensions.android.gms.auth.GooglePlayServicesAvailabilityIOException;
+import com.google.api.client.googleapis.extensions.android.gms.auth.UserRecoverableAuthIOException;
+import com.google.api.client.http.HttpTransport;
+import com.google.api.client.json.JsonFactory;
+import com.google.api.client.json.jackson2.JacksonFactory;
+import com.google.api.client.util.ExponentialBackOff;
+import com.google.api.services.calendar.CalendarScopes;
+import com.google.api.services.calendar.model.Event;
+import com.google.api.services.calendar.model.Events;
 
 import org.joda.time.DateTime;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 
+import pub.devrel.easypermissions.AfterPermissionGranted;
+import pub.devrel.easypermissions.EasyPermissions;
 import retrofit.Call;
 import retrofit.Callback;
 import retrofit.Response;
@@ -33,8 +61,8 @@ import retrofit.Retrofit;
 import salesianostriana.smartmirror.Interfaces.IOpenWeatherAPI;
 import salesianostriana.smartmirror.Pojos.OpenWeather.Prediccion;
 
-public class MainActivity extends AppCompatActivity implements GoogleApiClient.OnConnectionFailedListener,
-        GoogleApiClient.ConnectionCallbacks {
+public class MainActivity extends AppCompatActivity /*implements GoogleApiClient.OnConnectionFailedListener,
+        GoogleApiClient.ConnectionCallbacks*/ {
 
     TextView textViewHora, textViewFecha, textViewLugar, textViewTemperatura, textViewMensaje;
     ImageView imageViewIconoTiempo;
@@ -42,7 +70,15 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
     String TAG = "INFO";
     private static final int PETICION_PERMISO_LOCALIZACION = 101;
     private GoogleApiClient mGoogleApiClient;
-    String latitud = "", longitud = "", localidad = "";
+    String latitud = "37.380378", longitud = "-6.007132", localidad = "";
+    GoogleAccountCredential mCredential;
+    private static final String[] SCOPES = { CalendarScopes.CALENDAR_READONLY };
+    static final int REQUEST_ACCOUNT_PICKER = 1000;
+    static final int REQUEST_AUTHORIZATION = 1001;
+    static final int REQUEST_GOOGLE_PLAY_SERVICES = 1002;
+    static final int REQUEST_PERMISSION_GET_ACCOUNTS = 1003;
+    private static final String PREF_ACCOUNT_NAME = "accountName";
+    ListView lista;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,6 +89,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);//App pantalla completa
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);//Permite que la pantalla no se bloquee
 
+        lista = (ListView) findViewById(R.id.lista);
         textViewHora = (TextView) findViewById(R.id.text_view_hora);
         textViewFecha = (TextView) findViewById(R.id.text_view_fecha);
         textViewLugar = (TextView) findViewById(R.id.text_view_lugar);
@@ -105,12 +142,13 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
+                                getPrediccionActual();
                                 //UBICACIÓN
-                                mGoogleApiClient = new GoogleApiClient.Builder(MainActivity.this)
+                               /* mGoogleApiClient = new GoogleApiClient.Builder(MainActivity.this)
                                         .enableAutoManage(MainActivity.this, MainActivity.this)
                                         .addConnectionCallbacks(MainActivity.this)
                                         .addApi(LocationServices.API)
-                                        .build();
+                                        .build();*/
                             }
                         });
                         Thread.sleep(milisegundos);
@@ -121,6 +159,12 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
         };
 
         threadPrediccionActual.start();
+
+        mCredential = GoogleAccountCredential.usingOAuth2(
+                getApplicationContext(), Arrays.asList(SCOPES))
+                .setBackOff(new ExponentialBackOff());
+
+        getResultsFromApi();
 
     }
 
@@ -194,7 +238,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
     }
 
     /*UBICACIÓN*/
-    @Override
+    /*@Override
     public void onConnectionFailed(ConnectionResult result) {
         //Se ha producido un error que no se puede resolver automáticamente
         //y la conexión con los Google Play Services no se ha establecido.
@@ -202,7 +246,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
         Log.e(TAG, "Error grave al conectar con Google Play Services");
     }
 
-    /*Conectado correctamente a Google Play Services*/
+    *//*Conectado correctamente a Google Play Services*//*
     @Override
     public void onConnected(@Nullable Bundle bundle) {
 
@@ -228,7 +272,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
         Log.e(TAG, "Se ha interrumpido la conexión con Google Play Services");
     }
 
-    /*Actualiza las coordenadas actuales*/
+    *//*Actualiza las coordenadas actuales*//*
     private void updateLocation(Location loc) {
         if (loc != null) {
             latitud = String.valueOf(loc.getLatitude());
@@ -249,7 +293,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
         mGoogleApiClient.disconnect();
     }
 
-    /*Obtener la localidad a partir de la latitud y la longitud*/
+    *//*Obtener la localidad a partir de la latitud y la longitud*//*
     public void setLocation(Location loc) {
 
         if (loc.getLatitude() != 0.0 && loc.getLongitude() != 0.0) {
@@ -268,7 +312,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
         }
     }
 
-    /*Pide los permisos de localización*/
+    *//*Pide los permisos de localización*//*
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         if (requestCode == PETICION_PERMISO_LOCALIZACION) {
@@ -303,6 +347,236 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
         super.onStart();
         if (mGoogleApiClient != null) {
             mGoogleApiClient.connect();
+        }
+    }*/
+
+
+
+    private void getResultsFromApi() {
+        if (! isGooglePlayServicesAvailable()) {
+            acquireGooglePlayServices();
+
+        } else if (mCredential.getSelectedAccountName() == null) {
+            chooseAccount();
+
+        } else if (! isDeviceOnline()) {
+            Toast.makeText(this, "No hay conexión a internet", Toast.LENGTH_SHORT).show();
+        } else {
+
+            new MakeRequestTask(mCredential).execute();
+        }
+    }
+
+    private boolean isGooglePlayServicesAvailable() {
+        GoogleApiAvailability apiAvailability =
+                GoogleApiAvailability.getInstance();
+        final int connectionStatusCode =
+                apiAvailability.isGooglePlayServicesAvailable(this);
+        return connectionStatusCode == ConnectionResult.SUCCESS;
+    }
+
+    private void acquireGooglePlayServices() {
+        GoogleApiAvailability apiAvailability =
+                GoogleApiAvailability.getInstance();
+        final int connectionStatusCode =
+                apiAvailability.isGooglePlayServicesAvailable(this);
+        if (apiAvailability.isUserResolvableError(connectionStatusCode)) {
+            showGooglePlayServicesAvailabilityErrorDialog(connectionStatusCode);
+        }
+    }
+
+    void showGooglePlayServicesAvailabilityErrorDialog(
+            final int connectionStatusCode) {
+        GoogleApiAvailability apiAvailability = GoogleApiAvailability.getInstance();
+        Dialog dialog = apiAvailability.getErrorDialog(
+                MainActivity.this,
+                connectionStatusCode,
+                REQUEST_GOOGLE_PLAY_SERVICES);
+        dialog.show();
+    }
+
+    @AfterPermissionGranted(REQUEST_PERMISSION_GET_ACCOUNTS)
+    private void chooseAccount() {
+        if (EasyPermissions.hasPermissions(
+                this, Manifest.permission.GET_ACCOUNTS)) {
+            String accountName = getPreferences(Context.MODE_PRIVATE)
+                    .getString(PREF_ACCOUNT_NAME, null);
+            if (accountName != null) {
+                mCredential.setSelectedAccountName(accountName);
+                getResultsFromApi();
+            } else {
+                // Start a dialog from which the user can choose an account
+                startActivityForResult(
+                        mCredential.newChooseAccountIntent(),
+                        REQUEST_ACCOUNT_PICKER);
+            }
+        } else {
+            // Request the GET_ACCOUNTS permission via a user dialog
+            EasyPermissions.requestPermissions(
+                    this,
+                    "This app needs to access your Google account (via Contacts).",
+                    REQUEST_PERMISSION_GET_ACCOUNTS,
+                    Manifest.permission.GET_ACCOUNTS);
+        }
+    }
+
+    @Override
+    protected void onActivityResult(
+            int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        switch(requestCode) {
+            case REQUEST_GOOGLE_PLAY_SERVICES:
+                if (resultCode != RESULT_OK) {
+                    Toast.makeText(this, "result -> ok", Toast.LENGTH_SHORT).show();
+                } else {
+                    getResultsFromApi();
+                }
+                break;
+            case REQUEST_ACCOUNT_PICKER:
+                if (resultCode == RESULT_OK && data != null &&
+                        data.getExtras() != null) {
+                    String accountName =
+                            data.getStringExtra(AccountManager.KEY_ACCOUNT_NAME);
+                    if (accountName != null) {
+                        SharedPreferences settings =
+                                getPreferences(Context.MODE_PRIVATE);
+                        SharedPreferences.Editor editor = settings.edit();
+                        editor.putString(PREF_ACCOUNT_NAME, accountName);
+                        editor.apply();
+                        mCredential.setSelectedAccountName(accountName);
+                        getResultsFromApi();
+                    }
+                }
+                break;
+            case REQUEST_AUTHORIZATION:
+                if (resultCode == RESULT_OK) {
+                    getResultsFromApi();
+                }
+                break;
+        }
+    }
+
+    private boolean isDeviceOnline() {
+        ConnectivityManager connMgr =
+                (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
+        return (networkInfo != null && networkInfo.isConnected());
+    }
+
+    private class MakeRequestTask extends AsyncTask<Void, Void, List<String>> {
+        private com.google.api.services.calendar.Calendar mService = null;
+        private Exception mLastError = null;
+
+        MakeRequestTask(GoogleAccountCredential credential) {
+            HttpTransport transport = AndroidHttp.newCompatibleTransport();
+            JsonFactory jsonFactory = JacksonFactory.getDefaultInstance();
+            mService = new com.google.api.services.calendar.Calendar.Builder(
+                    transport, jsonFactory, credential)
+                    .setApplicationName("Google Calendar API Android Quickstart")
+                    .build();
+        }
+
+        /**
+         * Background task to call Google Calendar API.
+         *
+         * @param params no parameters needed for this task.
+         */
+        @Override
+        protected List<String> doInBackground(Void... params) {
+            try {
+                return getDataFromApi();
+            } catch (Exception e) {
+                mLastError = e;
+                cancel(true);
+                return null;
+            }
+        }
+
+        /**
+         * Fetch a list of the next 10 events from the primary calendar.
+         *
+         * @return List of Strings describing returned events.
+         * @throws IOException
+         */
+        private List<String> getDataFromApi() throws IOException {
+            // List the next 10 events from the primary calendar.
+            com.google.api.client.util.DateTime now = new com.google.api.client.util.DateTime(System.currentTimeMillis());
+
+            List<String> eventStrings = new ArrayList<String>();
+            Events events = mService.events().list("primary")
+                    .setMaxResults(5)
+                    .setTimeMin(now)
+                    .setOrderBy("startTime")
+                    .setSingleEvents(true)
+                    .execute();
+            List<Event> items = events.getItems();
+
+            for (Event event : items) {
+                String str;
+                org.joda.time.DateTime dateTimeJoda;
+
+                com.google.api.client.util.DateTime start = event.getStart().getDateTime();
+                if (start == null) {
+                    // All-day events don't have start times, so just use
+                    // the start date.
+
+                    start = event.getStart().getDate();
+                    dateTimeJoda = new org.joda.time.DateTime(start.getValue());
+                    DateTimeFormatter fmt = DateTimeFormat.forPattern("dd/MM");
+                    str = dateTimeJoda.toString(fmt);
+
+                } else {
+                    dateTimeJoda = new org.joda.time.DateTime(start.getValue());
+                    DateTimeFormatter fmt2 = DateTimeFormat.forPattern("HH:mm  dd/MM");
+                    str = dateTimeJoda.toString(fmt2);
+                }
+
+                eventStrings.add(
+                        String.format("%s (%s)", event.getSummary(), str));
+            }
+            return eventStrings;
+        }
+
+
+        @Override
+        protected void onPreExecute() {
+
+
+        }
+
+        @Override
+        protected void onPostExecute(List<String> output) {
+
+            if (output == null || output.size() == 0) {
+                ArrayList<String> array = new ArrayList<>();
+                array.add("No hay Eventos.");
+                ArrayAdapter<String> adapter = new ArrayAdapter<String>(MainActivity.this, R.layout.listaviewcustom, android.R.id.text1,array);
+                lista.setAdapter(adapter);
+            } else {
+
+                ArrayAdapter<String> adapter = new ArrayAdapter<String>(MainActivity.this, R.layout.listaviewcustom,android.R.id.text1, output);
+                lista.setAdapter(adapter);
+            }
+        }
+
+        @Override
+        protected void onCancelled() {
+
+            if (mLastError != null) {
+                if (mLastError instanceof GooglePlayServicesAvailabilityIOException) {
+                    showGooglePlayServicesAvailabilityErrorDialog(
+                            ((GooglePlayServicesAvailabilityIOException) mLastError)
+                                    .getConnectionStatusCode());
+                } else if (mLastError instanceof UserRecoverableAuthIOException) {
+                    startActivityForResult(
+                            ((UserRecoverableAuthIOException) mLastError).getIntent(),
+                            MainActivity.REQUEST_AUTHORIZATION);
+                } else {
+
+                }
+            } else {
+
+            }
         }
     }
 }
