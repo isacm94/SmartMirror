@@ -27,6 +27,7 @@ import java.util.Date;
 
 import retrofit.GsonConverterFactory;
 import retrofit.Retrofit;
+import salesianostriana.smartmirror.Interfaces.IGoogleGeo;
 import salesianostriana.smartmirror.Interfaces.IOpenWeatherAPI;
 
 /**
@@ -35,7 +36,7 @@ import salesianostriana.smartmirror.Interfaces.IOpenWeatherAPI;
 
 public class RetrofitApplication extends Application {
 
-    private static Retrofit retrofitGooglePlaces, retrofitOpenWeather;
+    private static Retrofit retrofitGooglePlaces, retrofitOpenWeather,retrofitGoogleGeo;
 
     @Override
     public void onCreate() {
@@ -62,6 +63,12 @@ public class RetrofitApplication extends Application {
                 .baseUrl(IOpenWeatherAPI.ENDPOINT)
                 .addConverterFactory(GsonConverterFactory.create(gson))
                 .client(initHttpOpenWeather())
+                .build();
+
+        retrofitGoogleGeo =  new Retrofit.Builder()
+                .baseUrl(IGoogleGeo.ENDPOINT)
+                .addConverterFactory(GsonConverterFactory.create(gson))
+                .client(initHttpGoogleGeo())
                 .build();
 
     }
@@ -131,6 +138,40 @@ public class RetrofitApplication extends Application {
 
     }
 
+    private static OkHttpClient initHttpGoogleGeo() {
+
+        Interceptor interceptor = new Interceptor() {
+            @Override
+            public com.squareup.okhttp.Response intercept(Interceptor.Chain chain) throws IOException {
+
+                Request original = chain.request();
+
+                HttpUrl originalHttpUrl = original.httpUrl();
+
+                HttpUrl url = originalHttpUrl.newBuilder()
+                        .addQueryParameter("result_type", "locality")
+                        .addQueryParameter("key", IGoogleGeo.APIKEY)
+                        .addQueryParameter("sensor", "true")
+                        .build();
+
+                Request newRequest = chain.request().newBuilder()
+                        .url(url)
+                        .cacheControl(CacheControl.FORCE_NETWORK)//limpia cache?
+                        .build();
+
+
+                return chain.proceed(newRequest);
+            }
+        };
+
+        OkHttpClient client = new OkHttpClient();
+
+        client.interceptors().add(interceptor);
+
+        return client;
+
+    }
+
     //********* GOOGLE PLACES API ***********
     /*public static Retrofit getRetrofitGooglePlaces() {
         return retrofitGooglePlaces;
@@ -141,6 +182,9 @@ public class RetrofitApplication extends Application {
         return retrofitOpenWeather;
     }
 
+    public static Retrofit getRetrofitGoogleGeo() {
+        return retrofitGoogleGeo;
+    }
 
     private static class DateTimeTypeConverter
             implements JsonSerializer<DateTime>, JsonDeserializer<DateTime> {

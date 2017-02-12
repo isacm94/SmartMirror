@@ -32,15 +32,17 @@
             android:id="@+id/icono_marker"
             android:layout_width="50dp"
             android:layout_height="50dp"
-            android:layout_marginLeft="250dp"
+            android:layout_marginLeft="275dp"
             android:layout_marginRight="5dp"
             android:src="@drawable/ic_marker" />
 
         <TextView
             android:id="@+id/text_view_lugar"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_toRightOf="@id/icono_marker"
+            android:layout_alignTop="@id/icono_marker"
+            android:layout_alignBottom="@id/icono_marker"
             android:text="Sevilla"
             android:textColor="@android:color/white"
             android:textSize="@dimen/tamanho_letra" />
@@ -86,17 +88,42 @@
             android:text="¡No cojas el paraguas!"
             android:textColor="@android:color/white"
             android:textSize="40sp" />
-    </RelativeLayout>
 
-    <RelativeLayout
-        android:layout_width="0dp"
-        android:layout_height="match_parent"
-        android:layout_weight="2">
+        <ImageView
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:id="@+id/image_view_calendario"
+            android:src="@drawable/ic_calendar"
+            android:layout_below="@id/icono_marker"
+            android:layout_alignLeft="@id/icono_marker"
+            android:layout_marginTop="15dp"
+            />
 
-        <ListView
+        <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:id="@+id/lista"></ListView>
+            android:id="@+id/text_view_eventos"
+            android:layout_toRightOf="@id/image_view_calendario"
+            android:layout_below="@id/icono_marker"
+            android:text="@string/eventos"
+            android:textColor="@android:color/white"
+            android:textSize="40sp"
+            android:layout_alignTop="@id/image_view_calendario"
+            android:layout_alignBottom="@id/image_view_calendario"
+            android:gravity="center"
+            android:layout_marginLeft="20dp"
+            />
 
+        <ListView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/lista"
+            android:layout_toRightOf="@id/text_view_fecha"
+            android:layout_below="@id/image_view_calendario"
+            android:layout_marginTop="10dp">
+
+        </ListView>
     </RelativeLayout>
+
+
 </LinearLayout>

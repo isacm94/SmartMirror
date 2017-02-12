@@ -20,6 +20,7 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.WindowManager;
+import android.webkit.PermissionRequest;
 import android.widget.ArrayAdapter;
 import android.widget.ImageView;
 import android.widget.ListView;
@@ -41,6 +42,13 @@ import com.google.api.client.util.ExponentialBackOff;
 import com.google.api.services.calendar.CalendarScopes;
 import com.google.api.services.calendar.model.Event;
 import com.google.api.services.calendar.model.Events;
+import com.karumi.dexter.Dexter;
+import com.karumi.dexter.MultiplePermissionsReport;
+import com.karumi.dexter.PermissionToken;
+import com.karumi.dexter.listener.PermissionDeniedResponse;
+import com.karumi.dexter.listener.PermissionGrantedResponse;
+import com.karumi.dexter.listener.multi.MultiplePermissionsListener;
+import com.karumi.dexter.listener.single.PermissionListener;
 
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
@@ -58,11 +66,15 @@ import retrofit.Call;
 import retrofit.Callback;
 import retrofit.Response;
 import retrofit.Retrofit;
+import salesianostriana.smartmirror.Interfaces.IGoogleGeo;
 import salesianostriana.smartmirror.Interfaces.IOpenWeatherAPI;
+import salesianostriana.smartmirror.Pojos.GoogleGeocode.Geocode;
 import salesianostriana.smartmirror.Pojos.OpenWeather.Prediccion;
 
-public class MainActivity extends AppCompatActivity /*implements GoogleApiClient.OnConnectionFailedListener,
-        GoogleApiClient.ConnectionCallbacks*/ {
+import static android.app.Activity.RESULT_OK;
+
+public class MainActivity extends AppCompatActivity implements GoogleApiClient.OnConnectionFailedListener,
+        GoogleApiClient.ConnectionCallbacks {
 
     TextView textViewHora, textViewFecha, textViewLugar, textViewTemperatura, textViewMensaje;
     ImageView imageViewIconoTiempo;
@@ -72,7 +84,7 @@ public class MainActivity extends AppCompatActivity /*implements GoogleApiClient
     private GoogleApiClient mGoogleApiClient;
     String latitud = "37.380378", longitud = "-6.007132", localidad = "";
     GoogleAccountCredential mCredential;
-    private static final String[] SCOPES = { CalendarScopes.CALENDAR_READONLY };
+    private static final String[] SCOPES = {CalendarScopes.CALENDAR_READONLY};
     static final int REQUEST_ACCOUNT_PICKER = 1000;
     static final int REQUEST_AUTHORIZATION = 1001;
     static final int REQUEST_GOOGLE_PLAY_SERVICES = 1002;
@@ -84,6 +96,7 @@ public class MainActivity extends AppCompatActivity /*implements GoogleApiClient
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
 
         getSupportActionBar().hide();//Oculta action bar
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);//App pantalla completa
@@ -105,6 +118,7 @@ public class MainActivity extends AppCompatActivity /*implements GoogleApiClient
         textViewLugar.setTypeface(font);
         textViewTemperatura.setTypeface(font);
         textViewMensaje.setTypeface(font);
+
 
         //Actualiza hora y fecha cada segundo
         Thread threadHoraFecha = new Thread() {
@@ -144,11 +158,11 @@ public class MainActivity extends AppCompatActivity /*implements GoogleApiClient
                             public void run() {
                                 getPrediccionActual();
                                 //UBICACIÓN
-                               /* mGoogleApiClient = new GoogleApiClient.Builder(MainActivity.this)
+                                mGoogleApiClient = new GoogleApiClient.Builder(MainActivity.this)
                                         .enableAutoManage(MainActivity.this, MainActivity.this)
                                         .addConnectionCallbacks(MainActivity.this)
                                         .addApi(LocationServices.API)
-                                        .build();*/
+                                        .build();
                             }
                         });
                         Thread.sleep(milisegundos);
@@ -166,6 +180,8 @@ public class MainActivity extends AppCompatActivity /*implements GoogleApiClient
 
         getResultsFromApi();
 
+
+
     }
 
     /* Actualiza la hora y la fecha actual, es actualizada cada 1 segundo.*/
@@ -178,7 +194,7 @@ public class MainActivity extends AppCompatActivity /*implements GoogleApiClient
         textViewHora.setText(hora);
 
         //FECHA
-        String formatDate = "EEEE, d MMMM";
+        String formatDate = "EEEE, d\nMMMM";
         String fecha = dateTimeNow.toString(formatDate);
         textViewFecha.setText(fecha);
     }
@@ -200,7 +216,7 @@ public class MainActivity extends AppCompatActivity /*implements GoogleApiClient
 
                     actualizaVista(prediccionActual);
 
-                    Log.d(TAG, "URL enviada: " + response.raw().request().url());
+                    Log.i(TAG, "URL enviada: " + response.raw().request().url());
 
                 } else {
                     Toast.makeText(getBaseContext(), "Error: " + response.code(), Toast.LENGTH_SHORT).show();
@@ -238,7 +254,7 @@ public class MainActivity extends AppCompatActivity /*implements GoogleApiClient
     }
 
     /*UBICACIÓN*/
-    /*@Override
+    @Override
     public void onConnectionFailed(ConnectionResult result) {
         //Se ha producido un error que no se puede resolver automáticamente
         //y la conexión con los Google Play Services no se ha establecido.
@@ -246,33 +262,47 @@ public class MainActivity extends AppCompatActivity /*implements GoogleApiClient
         Log.e(TAG, "Error grave al conectar con Google Play Services");
     }
 
-    *//*Conectado correctamente a Google Play Services*//*
+    /*Conectado correctamente a Google Play Services*/
     @Override
     public void onConnected(@Nullable Bundle bundle) {
 
-        if (ActivityCompat.checkSelfPermission(this,
-                Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
 
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
-                    PETICION_PERMISO_LOCALIZACION);
-        } else {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            Dexter.withActivity(this)
+                    .withPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+                    .withListener(new PermissionListener() {
+                        @Override
+                        public void onPermissionGranted(PermissionGrantedResponse response) {
 
-            Location lastLocation =
-                    LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
+                        }
 
-            updateLocation(lastLocation);
+                        @Override
+                        public void onPermissionDenied(PermissionDeniedResponse response) {
+
+                        }
+
+                        @Override
+                        public void onPermissionRationaleShouldBeShown(com.karumi.dexter.listener.PermissionRequest permission, PermissionToken token) {
+
+                        }
+                    }).check();
+            return;
         }
+        Location lastLocation =
+                LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
+
+        updateLocation(lastLocation);
+        //}
     }
 
     @Override
     public void onConnectionSuspended(int i) {
         //Se ha interrumpido la conexión con Google Play Services
-
         Log.e(TAG, "Se ha interrumpido la conexión con Google Play Services");
     }
 
-    *//*Actualiza las coordenadas actuales*//*
+    /*Actualiza las coordenadas actuales*/
     private void updateLocation(Location loc) {
         if (loc != null) {
             latitud = String.valueOf(loc.getLatitude());
@@ -293,47 +323,34 @@ public class MainActivity extends AppCompatActivity /*implements GoogleApiClient
         mGoogleApiClient.disconnect();
     }
 
-    *//*Obtener la localidad a partir de la latitud y la longitud*//*
+    /*Obtener la localidad a partir de la latitud y la longitud*/
     public void setLocation(Location loc) {
 
         if (loc.getLatitude() != 0.0 && loc.getLongitude() != 0.0) {
-            Geocoder geocoder = new Geocoder(this, Locale.getDefault());
-            List<Address> list = null;
-            try {
-                list = geocoder.getFromLocation(loc.getLatitude(), loc.getLongitude(), 1);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            if (!list.isEmpty()) {
-                Address address = list.get(0);
-                Log.d(TAG, "Localidad: " + address.getLocality());
-                localidad = address.getLocality();
-            }
+            Retrofit retrofit = RetrofitApplication.getRetrofitGoogleGeo();
+
+            IGoogleGeo service = retrofit.create(IGoogleGeo.class);
+
+            Call<Geocode> call = service.getLocalidad(loc.getLatitude() + "," + loc.getLongitude());
+
+            call.enqueue(new Callback<Geocode>() {
+                @Override
+                public void onResponse(Response<Geocode> response, Retrofit retrofit) {
+                    if (response.isSuccess()) {
+                        textViewLugar.setText(response.body().getResults().get(0).getAddressComponents().get(0).getShortName());
+                    } else {
+                    }
+                }
+
+                @Override
+                public void onFailure(Throwable t) {
+                    Log.i("loc", t.getMessage());
+
+                }
+            });
         }
     }
 
-    *//*Pide los permisos de localización*//*
-    @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-        if (requestCode == PETICION_PERMISO_LOCALIZACION) {
-            if (grantResults.length == 1
-                    && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-
-                //Permiso concedido
-
-                @SuppressWarnings("MissingPermission")
-                Location lastLocation =
-                        LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
-
-                updateLocation(lastLocation);
-
-            } else {
-                //Permiso denegado:
-                //Deberíamos deshabilitar toda la funcionalidad relativa a la localización.
-                Log.e(TAG, "Permiso denegado");
-            }
-        }
-    }
 
     @Override
     public void onDestroy() {
@@ -348,18 +365,15 @@ public class MainActivity extends AppCompatActivity /*implements GoogleApiClient
         if (mGoogleApiClient != null) {
             mGoogleApiClient.connect();
         }
-    }*/
-
+    }
 
 
     private void getResultsFromApi() {
-        if (! isGooglePlayServicesAvailable()) {
+        if (!isGooglePlayServicesAvailable()) {
             acquireGooglePlayServices();
-
         } else if (mCredential.getSelectedAccountName() == null) {
             chooseAccount();
-
-        } else if (! isDeviceOnline()) {
+        } else if (!isDeviceOnline()) {
             Toast.makeText(this, "No hay conexión a internet", Toast.LENGTH_SHORT).show();
         } else {
 
@@ -424,10 +438,9 @@ public class MainActivity extends AppCompatActivity /*implements GoogleApiClient
     protected void onActivityResult(
             int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        switch(requestCode) {
+        switch (requestCode) {
             case REQUEST_GOOGLE_PLAY_SERVICES:
                 if (resultCode != RESULT_OK) {
-                    Toast.makeText(this, "result -> ok", Toast.LENGTH_SHORT).show();
                 } else {
                     getResultsFromApi();
                 }
@@ -550,11 +563,11 @@ public class MainActivity extends AppCompatActivity /*implements GoogleApiClient
             if (output == null || output.size() == 0) {
                 ArrayList<String> array = new ArrayList<>();
                 array.add("No hay Eventos.");
-                ArrayAdapter<String> adapter = new ArrayAdapter<String>(MainActivity.this, R.layout.listaviewcustom, android.R.id.text1,array);
+                ArrayAdapter<String> adapter = new ArrayAdapter<String>(MainActivity.this, R.layout.listaviewcustom, android.R.id.text1, array);
                 lista.setAdapter(adapter);
             } else {
 
-                ArrayAdapter<String> adapter = new ArrayAdapter<String>(MainActivity.this, R.layout.listaviewcustom,android.R.id.text1, output);
+                ArrayAdapter<String> adapter = new ArrayAdapter<String>(MainActivity.this, R.layout.listaviewcustom, android.R.id.text1, output);
                 lista.setAdapter(adapter);
             }
         }
@@ -578,5 +591,7 @@ public class MainActivity extends AppCompatActivity /*implements GoogleApiClient
 
             }
         }
+
+
     }
 }
