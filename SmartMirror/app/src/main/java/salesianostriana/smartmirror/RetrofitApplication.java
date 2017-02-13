@@ -1,6 +1,7 @@
 package salesianostriana.smartmirror;
 
 import android.app.Application;
+import android.support.multidex.MultiDexApplication;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -34,7 +35,7 @@ import salesianostriana.smartmirror.Interfaces.IOpenWeatherAPI;
  * Created by Isabel on 08/12/2016.
  */
 
-public class RetrofitApplication extends Application {
+public class RetrofitApplication extends MultiDexApplication {
 
     private static Retrofit retrofitGooglePlaces, retrofitOpenWeather,retrofitGoogleGeo;
 
@@ -152,6 +153,7 @@ public class RetrofitApplication extends Application {
                         .addQueryParameter("result_type", "locality")
                         .addQueryParameter("key", IGoogleGeo.APIKEY)
                         .addQueryParameter("sensor", "true")
+                        .addQueryParameter("language","es")
                         .build();
 
                 Request newRequest = chain.request().newBuilder()

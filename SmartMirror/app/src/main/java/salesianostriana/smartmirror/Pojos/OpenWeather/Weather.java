@@ -164,10 +164,26 @@ public class Weather {
             mensaje = "¡Hoy hace un día estupendo!";
         else if (id > 800 && id <= 899)//80x - Cloud
             mensaje = "¡El día está nublado!";
-
-        else
-            mensaje = description;
-
+        else if(id== 701){
+            mensaje = "¡Cuidado! Hay niebla compañero";
+        } else if(id== 711){
+            mensaje = "¡El día está nublado!";
+        } else if(id== 721){
+            mensaje = "Vaya día más neblino compadre!";
+        } else if(id== 731){
+            mensaje = "cuidado no vaya a ser que te Torbenillees";
+        } else if(id== 741){
+            mensaje = "¡Cuidado! Hay niebla compañero";
+        }else if(id== 751){
+            mensaje = "Tapate la boca que hace un día arenoso";
+        }else if(id== 761){
+            mensaje = "Vaya día más polvoroso uff";
+        }else if(id== 771){
+            mensaje = "Si fuera tu cogería un chubasquero porque hay chubascos";
+        }else if(id== 781){
+            mensaje = "oyes eso *fiuuuu* es un TORNADO!!";
+        }else
+            mensaje = "Vaya día más...";
         return mensaje;
     }
 }

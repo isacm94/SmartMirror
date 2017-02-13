@@ -11,12 +11,11 @@
         android:textColor="@android:color/white"
         android:textAppearance="?android:attr/textAppearanceListItemSmall"
         android:gravity="center_vertical"
-        android:textSize="25sp"
-        android:ellipsize="end"
+        android:textSize="20sp"
         android:maxLines="1"
-        android:paddingStart="?android:attr/listPreferredItemPaddingStart"
+        android:ellipsize="end"
+        android:layout_marginTop="5dp"
         android:paddingEnd="?android:attr/listPreferredItemPaddingEnd"
         android:minHeight="?android:attr/listPreferredItemHeightSmall"
-        android:paddingLeft="?android:attr/listPreferredItemPaddingLeft"
         android:paddingRight="?android:attr/listPreferredItemPaddingRight" />
 </LinearLayout>

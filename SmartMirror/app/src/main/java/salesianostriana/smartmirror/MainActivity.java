@@ -71,7 +71,9 @@ import salesianostriana.smartmirror.Interfaces.IOpenWeatherAPI;
 import salesianostriana.smartmirror.Pojos.GoogleGeocode.Geocode;
 import salesianostriana.smartmirror.Pojos.OpenWeather.Prediccion;
 
+import static android.R.attr.value;
 import static android.app.Activity.RESULT_OK;
+import static org.joda.time.DateTimeFieldType.dayOfMonth;
 
 public class MainActivity extends AppCompatActivity implements GoogleApiClient.OnConnectionFailedListener,
         GoogleApiClient.ConnectionCallbacks {
@@ -194,9 +196,78 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
         textViewHora.setText(hora);
 
         //FECHA
-        String formatDate = "EEEE, d\nMMMM";
+        String formatDate = "EEEE\nd MMMM";
+        String month = null;
+        switch(dateTimeNow.getMonthOfYear()){
+            case 1:
+                month="Enero";
+                break;
+            case 2:
+                month="Febrero";
+                break;
+            case 3:
+                month="Marzo";
+                break;
+            case 4:
+                month="Abril";
+                break;
+            case 5:
+                month="Mayo";
+                break;
+            case 6:
+                month="Junio";
+                break;
+            case 7:
+                month="Julio";
+                break;
+            case 8:
+                month="Agosto";
+                break;
+            case 9:
+                month="Septiembre";
+                break;
+            case 10:
+                month="Octubre";
+                break;
+            case 11:
+                month="Noviembre";
+                break;
+            case 12:
+                month="Diciembre";
+                break;
+        }
+
+        switch (dateTimeNow.getMonthOfYear()){
+            case 1:
+        }
+        int dayMonth = dateTimeNow.getDayOfMonth();
+        String day = null;
+        switch(dateTimeNow.getDayOfWeek()){
+            case 1:
+                day="Lunes";
+                break;
+            case 2:
+                day="Martes";
+                break;
+            case 3:
+                day="Miércoles";
+                break;
+            case 4:
+                day="Jueves";
+                break;
+            case 5:
+                day="Viernes";
+                break;
+            case 6:
+                day="Sábado";
+                break;
+            case 7:
+                day="Domingo";
+                break;
+        }
+        dateTimeNow.monthOfYear().getName();
         String fecha = dateTimeNow.toString(formatDate);
-        textViewFecha.setText(fecha);
+        textViewFecha.setText(day+"\n"+dayMonth+" "+month);
     }
 
     /*Consulta la predicción actual según las coordenadas actuales*/
@@ -545,7 +616,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
                 }
 
                 eventStrings.add(
-                        String.format("%s (%s)", event.getSummary(), str));
+                        String.format("(%s) %s", str, event.getSummary()));
             }
             return eventStrings;
         }
@@ -593,5 +664,9 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
         }
 
 
+
+
     }
+
 }
+
